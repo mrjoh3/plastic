@@ -10,9 +10,11 @@
 library(shiny)
 library(readr)
 library(magrittr)
+library(plyr)
+library(dplyr)
 library(comtradr)
 #devtools::install_github("ropensci/comtradr")
-
+library(networkD3)
 
 if ('2017.csv' %in% list.files('data')) {
   
@@ -48,10 +50,19 @@ df <- filter(df, partner_code != 0) %>%
   summarise(netweight_kg = sum(netweight_kg, na.rm = TRUE)) %>%
   ungroup
 
+
+# larger importers will have larger radii
+size <- df %>%
+  group_by(partner) %>%
+  summarise(size = sum(netweight_kg, na.rm = T)) %>%
+  rename(name = partner) %>%
+  mutate(size = log2(size),
+         size = ifelse(is.na(size), 1, size))
+
 nodes <- data.frame(name = unique(c(df$reporter, df$partner)), 
-                    group = 1,
-                     size = 1) %>%
-  mutate(group = ifelse(name == 'China', 1, 2))
+                    group = 1) %>%
+  mutate(group = ifelse(name == 'China', 1, 2)) %>%
+  left_join(size)
 
 links <- df %>%
   select(source = reporter,
@@ -60,10 +71,14 @@ links <- df %>%
   mutate_if(is.character, funs(as.numeric(factor(., levels = nodes$name)) - 1)) %>%
   mutate(value = value / 100000)
 
+
+
 forceNetwork(Links = links, Nodes = nodes,
              Source = "source", Target = "target",
              Value = "value", NodeID = "name",
-             Group = "group", opacity = 0.8)
+             Group = "group", opacity = 0.8,
+             fontSize = 14, Nodesize = 'size',
+             zoom = TRUE, arrows = TRUE)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
