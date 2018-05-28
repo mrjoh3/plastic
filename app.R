@@ -147,7 +147,10 @@ server <- function(input, output) {
                            chordDiagram(select(df, 
                                                reporter,
                                                partner,
-                                               netweight_kg))
+                                               netweight_kg),
+                                        directional = 1,
+                                        direction.type = c("diffHeight", "arrows"), link.arr.type = "big.arrow"
+                                        )
                            )
                 )
       } else {
