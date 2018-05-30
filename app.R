@@ -50,26 +50,40 @@ ui <- fluidPage(
 server <- function(input, output) {
    
   input_date <- reactive({input$date})
+  dat <- reactiveValues(df = data.frame())
+  
+  names <- countrycode::codelist$un.name.en %>%
+    .[!is.na(.)] %>%
+    ct_country_lookup(.) %>%
+    .[!grepl('Fmr|excl.', ., ignore.case = TRUE)] %>%
+    unique
+  
+  ## save list of world coords
+  if ('world.csv' %in% list.files('data')) {
+    wld <- read_csv('data/world.csv')
+  } else {
+    wld <- read.csv('http://worldmap.harvard.edu/download/wfs/34645/csv?outputFormat=csv&service=WFS&request=GetFeature&format_options=charset%3AUTF-8&typename=geonode%3Acountry_centroids_az8&version=1.0.0')
+  }
+  
+  # match to comtrade names (currently error on Austria)
+  coords <- data.frame(cnames = names) %>%
+    rowwise() %>%
+    mutate(wld_name = agrep(cnames, wld$formal_en, value = TRUE)[1])
   
   ## get data from UN Comtrade
   observe({
     
     inputfile <- paste0(gsub('-', '', input_date()), '.csv')
+    print(input_date())
     
     if (inputfile %in% list.files('data')) {
-      
+      print('inside standard read section')
       df <- read_csv(sprintf('data/%s', inputfile)) 
       
     } else {
       
       withProgress(message = sprintf('Getting Data for %s from UN Comtrade', 
                                      input_date()), {
-        
-        names <- countrycode::codelist$un.name.en %>%
-          .[!is.na(.)] %>%
-          ct_country_lookup(.) %>%
-          .[!grepl('Fmr|excl.', ., ignore.case = TRUE)] %>%
-          unique
         
         n <- floor(length(names) / 5) + 1
         split_by = as.vector(sapply(1:n, rep_len, length.out = 5))[1:length(names)]
@@ -87,6 +101,8 @@ server <- function(input, output) {
                      }) %>% ldply
         
         write.csv(df, sprintf('data/%s', inputfile))
+        
+        df <- df
         
       })
 
@@ -123,9 +139,15 @@ server <- function(input, output) {
       mutate_if(is.character, funs(as.numeric(factor(., levels = nodes$name)) - 1)) %>%
       mutate(value = value / 100000)
     
+    dat$df <- df
+    dat$size <- size
+    dat$nodes <- nodes
+    dat$links <- links
+    dat$names <- names
+    
   })
  
-  
+
 
   
    output$plot <- renderUI({
@@ -134,7 +156,7 @@ server <- function(input, output) {
         print(input$plot_type)
         
         tagList(h3('Force Network'),
-                forceNetwork(Links = links, Nodes = nodes,
+                forceNetwork(Links = dat$links, Nodes = dat$nodes,
                              Source = "source", Target = "target",
                              Value = "value", NodeID = "name",
                              Group = "group", opacity = 0.8,
@@ -144,7 +166,7 @@ server <- function(input, output) {
       } else if (input$plot_type == 'chordDiagram') {
         tagList(h3('Chord Diagram'),
                 renderPlot(height = 800,
-                           chordDiagram(select(df, 
+                           chordDiagram(select(dat$df, 
                                                reporter,
                                                partner,
                                                netweight_kg),
