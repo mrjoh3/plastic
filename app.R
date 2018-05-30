@@ -63,6 +63,7 @@ server <- function(input, output) {
     wld <- read_csv('data/world.csv')
   } else {
     wld <- read.csv('http://worldmap.harvard.edu/download/wfs/34645/csv?outputFormat=csv&service=WFS&request=GetFeature&format_options=charset%3AUTF-8&typename=geonode%3Acountry_centroids_az8&version=1.0.0')
+    write.csv(wld, 'data/world.csv')
   }
   
   # match to comtrade names (currently error on Austria)
