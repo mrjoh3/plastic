@@ -17,7 +17,7 @@ library(comtradr)
 #devtools::install_github("ropensci/comtradr")
 library(networkD3)
 library(circlize)
-
+library(visNetwork)
 
 
 # Define UI for application that draws a histogram
@@ -31,7 +31,8 @@ ui <- fluidPage(
       sidebarPanel(
          selectizeInput('plot_type', 'Select Plot type', 
                         choices = list('Force Network' = 'forceNetwork',
-                                       'Chord Diagram' = 'chordDiagram')),
+                                       'Chord Diagram' = 'chordDiagram',
+                                       'Vis.js Network' = 'visNetwork')),
          selectizeInput('date', 'Select Month',
                         choices = format(seq.Date(as.Date('2016-01-01'), 
                                                            Sys.Date(), 'month'), '%Y-%m'),
@@ -128,14 +129,17 @@ server <- function(input, output) {
       mutate(size = log2(size),
              size = ifelse(is.na(size), 1, size))
     
-    nodes <- data.frame(name = unique(c(df$reporter, df$partner)), 
-                        group = 1) %>%
-      mutate(group = ifelse(name == 'China', 1, 2)) %>%
+    nodes <<- data.frame(name = unique(c(df$reporter, df$partner)), 
+                        group = 1,
+                        stringsAsFactors = FALSE) %>%
+      mutate(group = ifelse(name == 'China', 1, 2),
+             id = 1:nrow(.) - 1,
+             label = name) %>%
       left_join(size)
     
-    links <- df %>%
-      select(source = reporter,
-             target = partner,
+    links <<- df %>%
+      select(from = reporter,
+             to = partner,
              value = netweight_kg) %>%
       mutate_if(is.character, funs(as.numeric(factor(., levels = nodes$name)) - 1)) %>%
       mutate(value = value / 100000)
@@ -154,12 +158,10 @@ server <- function(input, output) {
    output$plot <- renderUI({
       # generate plot based on input$bins from ui.R
       if (input$plot_type == 'forceNetwork') {
-        print(input$plot_type)
-        
         tagList(h3('Force Network'),
                 forceNetwork(Links = dat$links, Nodes = dat$nodes,
-                             Source = "source", Target = "target",
-                             Value = "value", NodeID = "name",
+                             Source = "from", Target = "to",
+                             Value = "value", NodeID = "id",
                              Group = "group", opacity = 0.8,
                              fontSize = 14, Nodesize = 'size',
                              zoom = TRUE, arrows = TRUE)
@@ -176,6 +178,15 @@ server <- function(input, output) {
                                         )
                            )
                 )
+      } else if (input$plot_type == 'visNetwork') {
+        tagList(h3('Vis.js Network'),
+                visNetwork(dat$nodes, dat$links, height = '800px', width = '100%') %>%
+                  #visEdges(smooth = FALSE) %>% 
+                  visEdges(arrows = "to") %>%
+                  visOptions(#selectedBy = "group", 
+                             highlightNearest = TRUE, 
+                             nodesIdSelection = TRUE)
+        )
       } else {
         tagList(tags$h2('please select a plot type'))
       }
