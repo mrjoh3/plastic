@@ -1,3 +1,4 @@
+install.packages('devtools')
 install.packages('shiny')
 install.packages('readr')
 install.packages('magrittr')
