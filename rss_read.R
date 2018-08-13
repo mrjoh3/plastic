@@ -2,6 +2,8 @@ library(rvest)
 library(purrr)
 library(dplyr)
 
+# purrr and mutate from https://github.com/jennybc/manipulate-xml-with-purrr-dplyr-tidyr
+
 google_alert <- function(){
   
   url <- 'https://www.google.com/alerts/feeds/08111746092629807497/6708412876604198226'
