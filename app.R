@@ -19,6 +19,7 @@ library(networkD3)
 library(circlize)
 library(visNetwork)
 
+source('rss_read.R')
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -50,6 +51,19 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
    
+  ## google alerts text (migrate to db later)
+  new_ga <- google_alert()
+  
+  if ('galerts.csv' %in% list.files('data')) {
+    ga <<- read_csv('data/world.csv') %>%
+      add_row(new_ga) %>%
+      distinct()
+  } else {
+    ga <<- new_ga
+  }
+  
+  write.csv(ga, 'data/galerts.csv', row.names = FALSE)
+  
   input_date <- reactive({input$date})
   dat <- reactiveValues(df = data.frame())
   
