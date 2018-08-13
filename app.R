@@ -90,21 +90,24 @@ server <- function(input, output) {
         n <- floor(length(names) / 5) + 1
         split_by = as.vector(sapply(1:n, rep_len, length.out = 5))[1:length(names)]
         
+        #tryCatch(
         df <- lapply(split(names, split_by), 
                      function(nm){
                        incProgress(1/n)
-                       ct_search(reporters = nm,
-                                 partners = 'All',
-                                 trade_direction = "exports", 
-                                 freq = 'monthly', 
-                                 start_date = input_date(), 
-                                 end_date = input_date(),
-                                 commod_codes = '3915')
+                       Sys.sleep(1)
+                         ct_search(reporters = nm,
+                                   partners = 'All',
+                                   trade_direction = "exports", 
+                                   freq = 'monthly', 
+                                   start_date = input_date(), 
+                                   end_date = input_date(),
+                                   commod_codes = '3915')
                      }) %>% ldply
+        #)
         
         write.csv(df, sprintf('data/%s', inputfile))
         
-        df <- df
+        #df <- df
         
       })
 
