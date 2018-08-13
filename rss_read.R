@@ -19,11 +19,15 @@ google_alert <- function(){
                nodes = .) %>%
     mutate(col_name_raw = map(nodes, xml_name),
            cell_text = map(nodes, xml_text),
+           attr = map(nodes, xml_attrs),
            i = nodes %>% map(~ seq_along(.))) %>%
     select(row, 
            col_name_raw, 
-           cell_text) %>%
+           cell_text,
+           attr) %>%
     tidyr::unnest() %>%
+    mutate(cell_text = ifelse(col_name_raw == 'link', as.character(attr), cell_text)) %>%
+    select(-attr) %>%
     tidyr::spread(col_name_raw, cell_text)
 
   }
