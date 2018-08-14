@@ -52,11 +52,12 @@ ui <- fluidPage(
 server <- function(input, output) {
    
   ## google alerts text (migrate to db later)
-  new_ga <- google_alert()
+  new_ga <- google_alert() %>%
+    mutate_at(vars(published, updated), lubridate::as_datetime)
   
   if ('galerts.csv' %in% list.files('data')) {
-    ga <<- read_csv('data/world.csv') %>%
-      add_row(new_ga) %>%
+    ga <<- read_csv('data/galerts.csv') %>%
+      bind_rows(new_ga) %>%
       distinct()
   } else {
     ga <<- new_ga
